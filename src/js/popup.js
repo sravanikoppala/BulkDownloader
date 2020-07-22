@@ -1,75 +1,50 @@
-let progress;
-let datasetName = 'Sample name';
+let bgPage = chrome.extension.getBackgroundPage(); //Getting the variables from the background page
 
-$(document).ready(function() {
+let idsOfDownload = [];
+idsOfDownload = bgPage.downloadIds;
+console.log(idsOfDownload);
+ 
+let cancel = document.createElement("button");
+cancel.id = "cancel";
+cancel.className = "btn";
+cancel.innerHTML='<i class="fa fa-stop-circle"></i> Cancel All</button>';
+document.body.appendChild(cancel);
 
-    let updatePopupInterval;
+$('body').width(350); 
 
-    function updatePopup() {
+setInterval(function(){
 
-        chrome.runtime.sendMessage({
-            message: "update-popup"
-        });
+	let downloadString = LZString.decompress(localStorage.getItem('downloadLinks'));
 
-        if (progress >= 100) {
-            progress = 0;
-            clearInterval(updatePopupInterval);
-        }
+    if(downloadString === "") return;
 
+    let downloadLinks =  JSON.parse(downloadString);
+
+    if (downloadLinks !== undefined && downloadLinks !== null && downloadLinks !== "null") {
+        let status = `Total pending download: ${downloadLinks.length}`;
+        jQuery("#download-status").html(status);
     }
+    // if(downloadLinks.length===0){
+    //     //$(pause).hide();
+    //     //$(resume).hide();
+    //     $(cancel).hide();
+    // }else{
+    //    // $(pause).show();
+    //     //$(resume).show();
+    //     $(cancel).show();
+    // }
+},1000);
 
-    setInterval(updatePopup, 2000);
 
-});
-
-function updateProgressBar(progress) {
-    if (progress > 99) {
-        progress = 100;
-    }
-    let element = document.getElementById('progress_bar');
-    element.style.width = parseInt(progress) + '%';
-    element.innerHTML = parseInt(progress) + '%';
-}
-
-$(cancel).click(function() {
-    progress = 0;
-    updateProgressBar(progress);
-    chrome.runtime.sendMessage({ message: "cancel-download" });
-});
+/*
 $(pause).click(function() {
-    chrome.runtime.sendMessage({ message: "pause-download" });
-});
-$(resume).click(function() {
-    chrome.runtime.sendMessage({ message: "resume-download" });
+    chrome.runtime.sendMessage({"message": "pause-download"});
 });
 
-$(destination).click(function() {
-    chrome.downloads.showDefaultFolder()
+$(resume).click(function () {
+    chrome.runtime.sendMessage({"message": "start-download"});
+}); */
+
+$(cancel).click(function () {
+    chrome.runtime.sendMessage({message: "cancel-download"});
 });
-$(editFolderName).click(function() {
-    $(datasetName).replaceWith(datasetName);
-});
-
-//displaying the datasetname in the popup window
-chrome.storage.sync.get(['datasetName'], function(items) {
-    datasetName = items.datasetName;
-    if (datasetName.length > 45) {
-        datasetName = datasetName.slice(0, 40) + '...';
-    }
-    document.getElementById("datasetName").innerHTML = datasetName;
-
-});
-
-
-chrome.runtime.onMessage.addListener(
-    function(message, sender, sendMessage) {
-        if (
-            typeof(message) === "object" &&
-            message.message == "update-popup-progress"
-        ) {
-
-            progress = message.progress;
-            updateProgressBar(progress);
-        }
-    }
-);
